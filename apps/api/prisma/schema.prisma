@@ -11,3 +11,199 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// _________________________
+
+// ───────── Enums ─────────
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+}
+
+enum AccountStatus {
+  ACTIVE
+  PENDING
+  REJECTED
+  SUSPENDED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// ───────── Users ─────────
+model User {
+  id           String        @id @default(cuid())
+  email        String?       @unique
+  phone        String?       @unique
+  passwordHash String
+  name         String?
+  role         Role          @default(CUSTOMER)
+  customerType CustomerType  @default(RETAIL)
+  status       AccountStatus @default(ACTIVE)
+  addresses    Address[]
+  orders       Order[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("users")
+}
+
+// ───────── Address ─────────
+model Address {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label          String?          // "Home", "Office"
+  recipientName  String
+  recipientPhone String
+  province       String
+  city           String
+  address        String
+  postalCode     String?
+  isDefault      Boolean  @default(false)
+  orders         Order[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// ───────── Categories (parent/child) ─────────
+model Category {
+  id        String     @id @default(cuid())
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Category[] @relation("CategoryTree")
+  slug      String     @unique
+  name      String
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  products  Product[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+// ───────── Catalog ─────────
+model Product {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  name        String
+  description String?
+  isActive    Boolean          @default(true)
+  categories  Category[]
+  variants    ProductVariant[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id         String                @id @default(cuid())
+  productId  String
+  product    Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku        String                @unique
+  color      String?
+  model      String?
+  stock      Int                   @default(0) // in single units
+  isActive   Boolean               @default(true)
+  offers     ProductVariantOffer[]
+  orderItems OrderItem[]
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model ProductVariantOffer {
+  id           String         @id @default(cuid())
+  variantId    String
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  audience     CustomerType
+  unitsPerPack Int            @default(1) // retail = 1, wholesale = 4, 8, ...
+  price        Int                        // price of ONE pack
+  minPacks     Int            @default(1)
+  isActive     Boolean        @default(true)
+  orderItems   OrderItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([variantId, audience, unitsPerPack])
+  @@map("product_variant_offers")
+}
+
+// ───────── Orders ─────────
+model Order {
+  id           String       @id @default(cuid())
+  orderNumber  Int          @unique @default(autoincrement())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  customerType CustomerType
+  status       OrderStatus  @default(PENDING)
+
+  // link to the saved address (nullable: the user may delete it later)
+  addressId    String?
+  address      Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
+
+  // snapshot of the address at order time
+  recipientName  String
+  recipientPhone String
+  shipProvince   String
+  shipCity       String
+  shipAddress    String
+  shipPostalCode String?
+
+  subtotal     BigInt
+  shippingFee  Int          @default(0)
+  total        BigInt
+
+  items        OrderItem[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([addressId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String               @id @default(cuid())
+  orderId      String
+  order        Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId    String
+  variant      ProductVariant       @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  offerId      String?
+  offer        ProductVariantOffer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  // snapshot at purchase time
+  productName  String
+  color        String?
+  model        String?
+  sku          String
+  unitsPerPack Int
+  packPrice    Int
+  quantity     Int                  // number of packs
+  lineTotal    BigInt
+
+  @@index([orderId])
+  @@index([variantId])
+  @@map("order_items")
+}
