@@ -44,19 +44,47 @@ enum OrderStatus {
 // ───────── Users ─────────
 model User {
   id           String        @id @default(cuid())
+  phone        String        @unique
   email        String?       @unique
-  phone        String?       @unique
-  passwordHash String
   name         String?
   role         Role          @default(CUSTOMER)
   customerType CustomerType  @default(RETAIL)
   status       AccountStatus @default(ACTIVE)
   addresses    Address[]
   orders       Order[]
+  sessions     Session[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   @@map("users")
+}
+
+model OtpCode {
+  id        String    @id @default(cuid())
+  phone     String
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  consumedAt DateTime?        // set when used OR replaced by a newer code
+  createdAt DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@map("otp_codes")
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("sessions")
 }
 
 // ───────── Address ─────────
