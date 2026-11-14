@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { AppError } from "../errors.js";
+import multer from "multer";
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof AppError) {
@@ -20,6 +21,12 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
         })),
       },
     });
+    return;
+  }
+  if (err instanceof multer.MulterError) {
+    res
+      .status(400)
+      .json({ error: { code: `UPLOAD_${err.code}`, message: err.message } });
     return;
   }
   console.error(err);

@@ -1,3 +1,5 @@
+import { storage } from "../../lib/storage/index.js";
+
 interface OfferRow {
   id: string;
   unitsPerPack: number;
@@ -10,6 +12,7 @@ interface VariantRow {
   color: string | null;
   model: string | null;
   stock: number;
+  images: ImageRow[];
   offers: OfferRow[];
 }
 export interface ProductRow {
@@ -20,6 +23,23 @@ export interface ProductRow {
   categories: { slug: string; name: string }[];
   variants: VariantRow[];
 }
+
+interface ImageRow {
+  id: string;
+  key: string;
+  alt: string | null;
+  width: number;
+  height: number;
+}
+// add `images: ImageRow[]` to VariantRow
+
+const toImage = (i: ImageRow) => ({
+  id: i.id,
+  url: storage.url(i.key),
+  alt: i.alt,
+  width: i.width,
+  height: i.height,
+});
 
 function toOffer(o: OfferRow, stock: number) {
   const availablePacks = Math.floor(stock / o.unitsPerPack);
@@ -35,12 +55,15 @@ function toOffer(o: OfferRow, stock: number) {
 
 /** Full product with variants and the offers this audience may see. */
 export function toProductDetail(p: ProductRow) {
+  const first = p.variants.flatMap((v) => v.images)[0];
+
   return {
     id: p.id,
     slug: p.slug,
     name: p.name,
     description: p.description,
     categories: p.categories,
+    image: first ? toImage(first) : null,
     variants: p.variants.map((v) => ({
       id: v.id,
       sku: v.sku,

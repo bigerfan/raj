@@ -116,6 +116,7 @@ model Category {
   children  Category[] @relation("CategoryTree")
   slug      String     @unique
   name      String
+  imageKey  String?
   sortOrder Int        @default(0)
   isActive  Boolean    @default(true)
   products  Product[]
@@ -149,6 +150,7 @@ model ProductVariant {
   color      String?
   model      String?
   stock      Int                   @default(0) // in single units
+  images     ProductVariantImage[]
   isActive   Boolean               @default(true)
   offers     ProductVariantOffer[]
   orderItems OrderItem[]
@@ -157,6 +159,21 @@ model ProductVariant {
 
   @@index([productId])
   @@map("product_variants")
+}
+
+model ProductVariantImage {
+  id        String         @id @default(cuid())
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  key       String
+  alt       String?
+  width     Int
+  height    Int
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+
+  @@index([variantId, sortOrder])
+  @@map("product_variant_images")
 }
 
 model ProductVariantOffer {

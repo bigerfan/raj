@@ -27,6 +27,10 @@ const productSelect = (audience: CustomerType) => ({
       color: true,
       model: true,
       stock: true,
+      images: {
+        orderBy: { sortOrder: "asc" as const },
+        select: { id: true, key: true, alt: true, width: true, height: true },
+      },
       offers: {
         where: { isActive: true, audience },
         orderBy: { unitsPerPack: "asc" as const },

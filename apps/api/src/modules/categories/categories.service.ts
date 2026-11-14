@@ -1,5 +1,8 @@
 import { prisma } from "../../lib/db.js";
 import { AppError } from "../../common/errors.js";
+import { randomUUID } from "node:crypto";
+import { processImage } from "../../lib/images.js";
+import { storage } from "../../lib/storage/index.js";
 
 interface CategoryNode {
   id: string;
@@ -74,4 +77,42 @@ export async function getCategoryIdsWithDescendants(
 ): Promise<string[] | null> {
   const hit = find(await loadTree(), slug);
   return hit ? collectIds(hit.node) : null;
+}
+
+export async function setCategoryImage(
+  id: string,
+  file: Express.Multer.File | undefined,
+) {
+  if (!file) throw new AppError(400, "No file uploaded", "NO_FILES");
+  const category = await prisma.category.findUnique({
+    where: { id },
+    select: { imageKey: true },
+  });
+  if (!category)
+    throw new AppError(404, "Category not found", "CATEGORY_NOT_FOUND");
+
+  const img = await processImage(file.buffer);
+  const key = `categories/${randomUUID()}.webp`;
+  await storage.put(key, img.data);
+  try {
+    await prisma.category.update({ where: { id }, data: { imageKey: key } });
+  } catch (err) {
+    await storage.remove(key).catch(() => {});
+    throw err;
+  }
+  if (category.imageKey)
+    await storage.remove(category.imageKey).catch(() => {});
+  return { imageUrl: storage.url(key) };
+}
+
+export async function removeCategoryImage(id: string) {
+  const category = await prisma.category.findUnique({
+    where: { id },
+    select: { imageKey: true },
+  });
+  if (!category)
+    throw new AppError(404, "Category not found", "CATEGORY_NOT_FOUND");
+  await prisma.category.update({ where: { id }, data: { imageKey: null } });
+  if (category.imageKey)
+    await storage.remove(category.imageKey).catch(() => {});
 }

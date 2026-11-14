@@ -8,6 +8,8 @@ const schema = z.object({
   PORT: z.coerce.number().default(4000),
   WEB_URL: z.string().min(1),
   DATABASE_URL: z.string().min(1),
+  UPLOADS_DIR: z.string().default("./uploads"),
+  API_PUBLIC_URL: z.url(),
   JWT_ACCESS_SECRET: z.string().min(32),
   OTP_PEPPER: z.string().min(32),
   COOKIE_DOMAIN: z
