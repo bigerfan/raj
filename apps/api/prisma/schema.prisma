@@ -68,6 +68,9 @@ model OtpCode {
   consumedAt DateTime?        // set when used OR replaced by a newer code
   createdAt DateTime  @default(now())
 
+  
+
+  @@index([createdAt])
   @@index([phone, createdAt])
   @@map("otp_codes")
 }
@@ -85,6 +88,9 @@ model Session {
 
   @@index([userId])
   @@map("sessions")
+  @@index([expiresAt])
+  @@index([revokedAt])
+
 }
 
 // ───────── Address ─────────
