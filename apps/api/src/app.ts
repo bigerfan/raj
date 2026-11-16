@@ -19,6 +19,8 @@ export function createApp() {
   app.use(express.json());
   app.use(cookieParser());
 
+  app.set("trust proxy", 1);
+
   app.use(
     "/uploads",
     express.static(uploadsRoot, {

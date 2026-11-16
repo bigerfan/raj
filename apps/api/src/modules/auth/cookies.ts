@@ -4,7 +4,7 @@ import { ACCESS_TTL_SECONDS, REFRESH_TTL_MS } from "./tokens.js";
 
 export const ACCESS_COOKIE = "access_token";
 export const REFRESH_COOKIE = "refresh_token";
-const REFRESH_PATH = "/auth"; // refresh cookie is only sent to /auth/*
+const REFRESH_PATH = "/";
 
 const base: CookieOptions = {
   httpOnly: true,
